@@ -43,7 +43,7 @@ while more_albums_available do
 
   response = Faraday.post(
     "https://bandcamp.com/api/fancollection/1/collection_items",
-    { fan_id: $fan_id, older_than_token: last_token, count: 20}.to_json,
+    { fan_id: $fan_id, older_than_token: last_token, count: 100}.to_json,
     "Content-Type" => "application/json"
   )
 
@@ -77,7 +77,7 @@ def get_collectors(tralbum_id:)
 
   initial_response = Faraday.post(
     "https://bandcamp.com/api/tralbumcollectors/2/initial",
-    { tralbum_type: "a", tralbum_id: tralbum_id, reviews_count: 0, thumbs_count: 100, exclude_fan_ids: [$fan_id] }.to_json,
+    { tralbum_type: "a", tralbum_id: tralbum_id, reviews_count: 0, thumbs_count: 500, exclude_fan_ids: [$fan_id] }.to_json,
     "Content-Type" => "application/json"
   )
 
@@ -106,7 +106,7 @@ def get_collectors(tralbum_id:)
     puts "getting more collectors for album #{tralbum_id}."
     response = Faraday.post(
       "https://bandcamp.com/api/tralbumcollectors/2/thumbs",
-      { tralbum_type: "a", tralbum_id: tralbum_id, token: last_token, count: 100 }.to_json,
+      { tralbum_type: "a", tralbum_id: tralbum_id, token: last_token, count: 500 }.to_json,
       "Content-Type" => "application/json"
     )
 
