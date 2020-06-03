@@ -100,7 +100,7 @@ def get_collectors(tralbum_id:, tralbum_type:)
   end
 
   more_collectors_available = parsed_initial_response["more_thumbs_available"]
-  last_token = parsed_initial_response["thumbs"].last["token"]
+  last_token = (parsed_initial_response["thumbs"].last || {}) ["token"]
 
   while more_collectors_available do
     puts "getting more collectors for album #{tralbum_id}."
