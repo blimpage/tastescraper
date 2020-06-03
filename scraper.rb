@@ -145,7 +145,16 @@ end
 
 puts "collectors with more than one album: #{collectors_with_more_than_one_album.count}"
 
+collectors_by_compatibility = $all_collectors
+                                .values
+                                .group_by { |collector| collector[:tralbum_ids].count }
+                                .sort_by { |shared_album_count, _collectors| shared_album_count }
 
+puts "collector count by compatibility:"
+puts collectors_by_compatibility.map { |shared_album_count, collectors| [shared_album_count, collectors.count] }.map { |arr| arr.join(": ")}.join(" | ")
+
+puts "most compatible collectors:"
+puts collectors_by_compatibility.last
 
 # # Write out to the sqlite database using scraperwiki library
 # ScraperWiki.save_sqlite(["name"], {"name" => "susan", "occupation" => "software developer"})
