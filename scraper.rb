@@ -23,6 +23,7 @@ initial_albums = album_elements.map do |album_element|
 
   {
     tralbum_id: album_element["data-tralbumid"],
+    tralbum_type: album_element["data-tralbumtype"],
     title: album_element.search(".collection-item-title").first.inner_text.gsub("(gift given)", "").strip,
     artist: album_element.search(".collection-item-artist").first.inner_text.strip.gsub(/\Aby /, ""),
     url: agent.agent.resolve(link_element["href"]).to_s,
@@ -52,6 +53,7 @@ while more_albums_available do
   next_albums = parsed_response["items"].map do |item|
     {
       tralbum_id: item["tralbum_id"],
+      tralbum_type: item["tralbum_type"],
       title: item["item_title"],
       artist: item["band_name"],
       url: item["item_url"],
@@ -65,19 +67,17 @@ end
 
 puts "no more albums, all done!"
 
-# puts $all_albums
-
 puts "#{$all_albums.count} albums total."
 
 $all_collectors = {}
 
-def get_collectors(tralbum_id:)
+def get_collectors(tralbum_id:, tralbum_type:)
   puts "getting initial collectors for album #{tralbum_id}."
   collector_count_for_album = 0
 
   initial_response = Faraday.post(
     "https://bandcamp.com/api/tralbumcollectors/2/initial",
-    { tralbum_type: "a", tralbum_id: tralbum_id, reviews_count: 0, thumbs_count: 500, exclude_fan_ids: [$fan_id] }.to_json,
+    { tralbum_type: tralbum_type, tralbum_id: tralbum_id, reviews_count: 0, thumbs_count: 500, exclude_fan_ids: [$fan_id] }.to_json,
     "Content-Type" => "application/json"
   )
 
@@ -106,7 +106,7 @@ def get_collectors(tralbum_id:)
     puts "getting more collectors for album #{tralbum_id}."
     response = Faraday.post(
       "https://bandcamp.com/api/tralbumcollectors/2/thumbs",
-      { tralbum_type: "a", tralbum_id: tralbum_id, token: last_token, count: 500 }.to_json,
+      { tralbum_type: tralbum_type, tralbum_id: tralbum_id, token: last_token, count: 500 }.to_json,
       "Content-Type" => "application/json"
     )
 
@@ -135,8 +135,8 @@ def get_collectors(tralbum_id:)
   puts "#{collector_count_for_album} collectors found for album #{tralbum_id}. Now at #{$all_collectors.keys.count} total collectors."
 end
 
-$all_albums.first(10).each do |album|
-  get_collectors(tralbum_id: album[:tralbum_id])
+$all_albums.each do |album|
+  get_collectors(tralbum_id: album[:tralbum_id], tralbum_type: album[:tralbum_type])
 end
 
 collectors_with_more_than_one_album = $all_collectors.values.select do |collector|
