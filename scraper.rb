@@ -4,30 +4,35 @@ require "mechanize"
 agent = Mechanize.new
 
 username = "blimpage"
+fan_id = 11254
 collection_url = "https://bandcamp.com/#{username}"
 
 # Read in a page
 page = agent.get(collection_url)
 
 # Find something on the page using css selectors
-album_elements = page.search('.collection-title-details')
+album_elements = page.search('.collection-item-container')
 
-albums = album_elements.map do |album|
-  link_element = album.children.detect { |el| el["class"] == "item-link" }
+albums = album_elements.map do |album_element|
+  link_element = album_element.search(".item-link").first
 
   {
-    title: link_element.children.detect { |el| el["class"] == "collection-item-title" }.inner_text.gsub("(gift given)", "").strip,
-    artist: link_element.children.detect { |el| el["class"] == "collection-item-artist" }.inner_text.strip.gsub(/\Aby /, ""),
+    title: album_element.search(".collection-item-title").first.inner_text.gsub("(gift given)", "").strip,
+    artist: album_element.search(".collection-item-artist").first.inner_text.strip.gsub(/\Aby /, ""),
     url: agent.agent.resolve(link_element["href"]).to_s,
   }
 end
 
 p albums
 
-# Button that loads more albums.
-# Once this is clicked, it loads more albums, then waits until the user has
-# scrolled down to the bottom of the page to load more.
-page.at(".show-more")
+# From here we need to grab further albums by hitting Bandcamp's JSON API.
+# Each request needs a token from the previous request, and we can grab our
+# first "last token" out of the DOM here.
+last_token = album_elements.last["data-token"]
+
+
+
+
 
 # # Write out to the sqlite database using scraperwiki library
 # ScraperWiki.save_sqlite(["name"], {"name" => "susan", "occupation" => "software developer"})
