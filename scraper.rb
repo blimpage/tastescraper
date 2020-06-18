@@ -9,10 +9,13 @@ username = "blimpage"
 $fan_id = 11254
 collection_url = "https://bandcamp.com/#{username}"
 
-if $saved_albums
-  $all_albums = $saved_albums
+if $saved_all_albums
+  $all_albums = $saved_all_albums
+  $my_albums = $saved_my_albums
+  puts "Got saved data, skipping getting new data"
 else
   $all_albums = []
+  $my_albums = []
 
   # Read in a page
   page = agent.get(collection_url)
@@ -26,7 +29,7 @@ else
     link_element = album_element.search(".item-link").first
 
     {
-      tralbum_id: album_element["data-tralbumid"],
+      tralbum_id: album_element["data-tralbumid"].to_i,
       tralbum_type: album_element["data-tralbumtype"],
       title: album_element.search(".collection-item-title").first.inner_text.gsub("(gift given)", "").strip,
       artist: album_element.search(".collection-item-artist").first.inner_text.strip.gsub(/\Aby /, ""),
@@ -35,6 +38,7 @@ else
   end
 
   $all_albums += initial_albums
+  $my_albums += initial_albums.map { |album| album[:tralbum_id] }
 
   # From here we need to grab further albums by hitting Bandcamp's JSON API.
   # Each request needs a token from the previous request, and we can grab our
@@ -56,7 +60,7 @@ else
 
     next_albums = parsed_response["items"].map do |item|
       {
-        tralbum_id: item["tralbum_id"],
+        tralbum_id: item["tralbum_id"].to_i,
         tralbum_type: item["tralbum_type"],
         title: item["item_title"],
         artist: item["band_name"],
@@ -65,6 +69,7 @@ else
     end
 
     $all_albums += next_albums
+    $my_albums += next_albums.map { |album| album[:tralbum_id] }
     more_albums_available = parsed_response["more_available"]
     last_token = parsed_response["last_token"]
   end
@@ -143,7 +148,13 @@ else
     puts "#{collector_count_for_album} collectors found for album #{tralbum_id}. Now at #{$all_collectors.keys.count} total collectors."
   end
 
-  $all_albums.each do |album|
+  my_albums_with_full_details = $my_albums.map do |tralbum_id|
+    $all_albums.detect do |album|
+      album[:tralbum_id] == tralbum_id
+    end
+  end
+
+  my_albums_with_full_details.each do |album|
     get_collectors(tralbum_id: album[:tralbum_id], tralbum_type: album[:tralbum_type])
   end
 end
