@@ -29,6 +29,7 @@ def all_albums_for_collector(username:, fan_id:)
       title: album_element.search(".collection-item-title").first.inner_text.gsub("(gift given)", "").strip,
       artist: album_element.search(".collection-item-artist").first.inner_text.strip.gsub(/\Aby /, ""),
       url: $agent.agent.resolve(link_element["href"]).to_s,
+      collector_ids: [fan_id],
     }
   end
 
@@ -59,6 +60,7 @@ def all_albums_for_collector(username:, fan_id:)
         title: item["item_title"],
         artist: item["band_name"],
         url: item["item_url"],
+        collector_ids: [fan_id],
       }
     end
 
@@ -77,11 +79,17 @@ if $saved_all_albums
   $my_albums = $saved_my_albums
   puts "Got saved data, skipping getting new data"
 else
-  $all_albums = []
+  $all_albums = {}
   $my_albums = []
 
   my_albums = all_albums_for_collector(username: $username, fan_id: $fan_id)
-  $all_albums += my_albums
+  my_albums.each do |album|
+    if $all_albums[album[:tralbum_id]]
+      $all_albums[album[:tralbum_id]][:collector_ids] += $fan_id
+    else
+      $all_albums[album[:tralbum_id]] = album
+    end
+  end
   $my_albums += my_albums.map { |album| album[:tralbum_id] }
 end
 
