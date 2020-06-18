@@ -3,26 +3,21 @@ require "mechanize"
 require "faraday"
 require_relative "saved_data"
 
-agent = Mechanize.new
+$agent = Mechanize.new
 
-username = "blimpage"
+$username = "blimpage"
 $fan_id = 11254
-collection_url = "https://bandcamp.com/#{username}"
 
-if $saved_all_albums
-  $all_albums = $saved_all_albums
-  $my_albums = $saved_my_albums
-  puts "Got saved data, skipping getting new data"
-else
-  $all_albums = []
-  $my_albums = []
+def all_albums_for_collector(username:, fan_id:)
+  puts "finding albums for collector #{username} (fan_id #{fan_id})"
+  albums_for_collector = []
 
-  # Read in a page
-  page = agent.get(collection_url)
+  collector_page_url = "https://bandcamp.com/#{username}"
+
+  page = $agent.get(collector_page_url)
 
   puts "grabbing initial albums"
 
-  # Find something on the page using css selectors
   album_elements = page.search('.collection-item-container')
 
   initial_albums = album_elements.map do |album_element|
@@ -33,12 +28,11 @@ else
       tralbum_type: album_element["data-tralbumtype"],
       title: album_element.search(".collection-item-title").first.inner_text.gsub("(gift given)", "").strip,
       artist: album_element.search(".collection-item-artist").first.inner_text.strip.gsub(/\Aby /, ""),
-      url: agent.agent.resolve(link_element["href"]).to_s,
+      url: $agent.agent.resolve(link_element["href"]).to_s,
     }
   end
 
-  $all_albums += initial_albums
-  $my_albums += initial_albums.map { |album| album[:tralbum_id] }
+  albums_for_collector += initial_albums
 
   # From here we need to grab further albums by hitting Bandcamp's JSON API.
   # Each request needs a token from the previous request, and we can grab our
@@ -52,7 +46,7 @@ else
 
     response = Faraday.post(
       "https://bandcamp.com/api/fancollection/1/collection_items",
-      { fan_id: $fan_id, older_than_token: last_token, count: 100}.to_json,
+      { fan_id: fan_id, older_than_token: last_token, count: 100}.to_json,
       "Content-Type" => "application/json"
     )
 
@@ -68,14 +62,28 @@ else
       }
     end
 
-    $all_albums += next_albums
-    $my_albums += next_albums.map { |album| album[:tralbum_id] }
+    albums_for_collector += next_albums
     more_albums_available = parsed_response["more_available"]
     last_token = parsed_response["last_token"]
   end
+
+  puts "no more albums, all done!"
+
+  albums_for_collector
 end
 
-puts "no more albums, all done!"
+if $saved_all_albums
+  $all_albums = $saved_all_albums
+  $my_albums = $saved_my_albums
+  puts "Got saved data, skipping getting new data"
+else
+  $all_albums = []
+  $my_albums = []
+
+  my_albums = all_albums_for_collector(username: $username, fan_id: $fan_id)
+  $all_albums += my_albums
+  $my_albums += my_albums.map { |album| album[:tralbum_id] }
+end
 
 puts "#{$all_albums.count} albums total."
 
