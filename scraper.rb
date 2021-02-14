@@ -192,6 +192,14 @@ puts collectors_by_compatibility.map { |shared_album_count, collectors| [shared_
 puts "most compatible collectors:"
 puts collectors_by_compatibility.last
 
+collectors_to_crawl = collectors_by_compatibility
+                        .select { |shared_album_count, _collectors| shared_album_count >= 23 }
+                        .flat_map { |_shared_album_count, collectors| collectors }
+
+puts "collectors_to_crawl:"
+puts collectors_to_crawl.map { |collector| collector[:username] }
+
+
 # # Write out to the sqlite database using scraperwiki library
 # ScraperWiki.save_sqlite(["name"], {"name" => "susan", "occupation" => "software developer"})
 #
